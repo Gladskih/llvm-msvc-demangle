@@ -12,12 +12,15 @@ for (const file of (await readdir(root)).filter(name => name.startsWith("ms-")))
   for (const name of lines.filter(line => /^[?.]/.test(line))) {
     const result = api.demangle(name);
     assert.notEqual(result.status, "error", `${file}: ${name}: ${result.warnings}`);
+    assert.notEqual(api.demangleWithText(name).status, "error", `Formatted ${file}: ${name}`);
     for (const node of result.ast?.nodes ?? []) kinds.add(node.kind);
     cases++;
     // Every prefix exercises truncation at a different grammar boundary.
     for (let length = 1; length < name.length; ++length) {
       const truncated = api.demangle(name.slice(0, length));
       assert.notEqual(truncated.status, "error", `Truncated ${file}: ${name.slice(0, length)}`);
+      assert.notEqual(api.demangleWithText(name.slice(0, length)).status, "error",
+        `Formatted truncated ${file}: ${name.slice(0, length)}`);
       damaged++;
     }
   }

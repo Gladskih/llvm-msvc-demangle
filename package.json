@@ -1,6 +1,6 @@
 {
   "name": "llvm-msvc-demangle",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Local LLVM Microsoft C++ demangler with a structured AST, compiled to WebAssembly",
   "type": "module",
   "license": "MIT",

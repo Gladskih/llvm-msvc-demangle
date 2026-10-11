@@ -8,7 +8,8 @@ Use small cohesive modules, double-quoted JavaScript strings, const by default,
 descriptive names, functions generally under 30 lines (never over 50), and complexity
 below 10. Aim for 100-column lines. Avoid boolean control parameters, single-use
 constants, generic helper modules, redundant result fields, and repeated parsing.
-The analyzer returns plain objects and warnings; presentation belongs to consumers.
+The analyzer returns plain objects and warnings. Keep native presentation opt-in through
+separate methods; the analysis methods must not invoke the presentation formatter.
 Use imperative, present-tense commit messages.
 
 Bounds-check lengths and pointers before reads. Malformed/truncated names must

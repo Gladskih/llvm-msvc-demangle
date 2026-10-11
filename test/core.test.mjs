@@ -14,6 +14,10 @@ function runtime(result = { status: "success", ast: { root: 0, nodes: [] }, cons
     },
     _result_size: () => bytes.length,
   };
+  module._demangle_with_text = (length, mode) => {
+    module.formatted = true;
+    return module._demangle(length, mode);
+  };
   return module;
 }
 
@@ -29,6 +33,43 @@ test("copies ASCII bytes, selects each native entry mode, and returns detached r
   first.warnings.push("local change");
   assert.deepEqual(api.demangleType(".H").warnings, []);
   assert.deepEqual(module.last, { length: 2, mode: 1 });
+});
+
+test("formatted methods select the native formatter and default failure text to null", () => {
+  const module = runtime({ status: "success", text: "int", ast: { root: 0, nodes: [] },
+    consumed: 2, warnings: [] });
+  const api = createApi(module);
+  assert.equal(api.demangle("?").status, "success");
+  assert.equal(module.formatted, undefined);
+  assert.equal(api.demangleWithText("?").text, "int");
+  assert.deepEqual(module.last, { length: 1, mode: 0 });
+  assert.equal(module.formatted, true);
+  assert.equal(api.demangleTypeWithText(".H").text, "int");
+  assert.deepEqual(module.last, { length: 2, mode: 1 });
+  assert.deepEqual(api.demangleWithText(null), { ...api.demangle(null), text: null });
+  module._input_buffer = () => 0;
+  assert.equal(api.demangleTypeWithText(".H").text, null);
+});
+
+test("formatter traps quarantine both formatted and analysis methods", () => {
+  const module = runtime();
+  module._demangle_with_text = () => { throw new WebAssembly.RuntimeError("formatter trap"); };
+  const api = createApi(module);
+  const result = api.demangleWithText("?");
+  assert.equal(result.status, "error");
+  assert.equal(result.text, null);
+  assert.match(result.warnings[0], /formatter trap/);
+  assert.equal(api.demangle("?").status, "error");
+  assert.equal(api.demangleTypeWithText(".H").text, null);
+});
+
+test("a missing formatter export fails instead of silently returning analysis without text", () => {
+  const module = runtime();
+  delete module._demangle_with_text;
+  const result = createApi(module).demangleWithText("?");
+  assert.equal(result.status, "error");
+  assert.equal(result.text, null);
+  assert.equal(result.ast, null);
 });
 
 test("invalid input returns diagnostics before accessing WASM", () => {

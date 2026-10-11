@@ -5,8 +5,8 @@ import createModule from "../dist/llvm-msvc-demangle.js";
 
 const module = await createModule({ wasmBinary: await readFile(
   new URL("../dist/llvm-msvc-demangle.wasm", import.meta.url)), printErr: () => {} });
-function invoke(length, mode) {
-  const pointer = module._demangle(length, mode);
+function invoke(length, mode, entry = module._demangle) {
+  const pointer = entry(length, mode);
   return JSON.parse(new TextDecoder().decode(module.HEAPU8.subarray(pointer,
     pointer + module._result_size())));
 }
@@ -17,6 +17,16 @@ test("native ABI rejects invalid lengths and modes before reading input", () => 
   assert.equal(invoke(18, 0).status, "invalid");
   assert.equal(invoke(-1, 0).status, "invalid");
   assert.equal(invoke(1, 2).status, "invalid");
+});
+
+test("formatted native ABI validates the same lengths, modes and bytes before formatting", () => {
+  assert.equal(invoke(0, 0, module._demangle_with_text).status, "invalid");
+  const pointer = module._input_buffer(1);
+  module.HEAPU8[pointer] = 0;
+  assert.equal(invoke(1, 0, module._demangle_with_text).status, "invalid");
+  assert.equal(invoke(2, 0, module._demangle_with_text).status, "invalid");
+  module.HEAPU8[pointer] = 63;
+  assert.equal(invoke(1, 2, module._demangle_with_text).status, "invalid");
 });
 
 test("native ABI rejects embedded NUL, controls and non-ASCII bytes", () => {

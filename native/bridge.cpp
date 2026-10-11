@@ -41,7 +41,9 @@ static std::string failure(std::string_view status, std::string_view warning) {
   return out.result();
 }
 
-static std::string parse(size_t length, unsigned mode) {
+enum class Output { Ast, AstWithText };
+
+static std::string parse(size_t length, unsigned mode, Output output) {
   Demangler demangler;
   std::string_view remaining(input.data(), length);
   Node *root = demangler.parse(remaining);
@@ -57,6 +59,9 @@ static std::string parse(size_t length, unsigned mode) {
   out.key("status"); out.string(remaining.empty() ? "success" : "partial");
   out.key("consumed"); out.number(length - remaining.size());
   out.key("ast"); Graph{}.write(out, root);
+  if (output == Output::AstWithText) {
+    out.key("text"); out.string(root->toString());
+  }
   out.key("warnings"); out.raw("[");
   if (!remaining.empty()) out.string("Trailing input was not consumed by LLVM.");
   out.raw("]"); out.raw("}");
@@ -76,15 +81,21 @@ static bool validInput(size_t length, unsigned mode) {
   }
   return true;
 }
-extern "C" const char *demangle(size_t length, unsigned mode) {
+static const char *run(size_t length, unsigned mode, Output output) {
   if (!validInput(length, mode))
     result = failure("invalid", "Invalid native input length or mode.");
   else {
-    try { result = parse(length, mode); }
+    try { result = parse(length, mode, output); }
     catch (const std::bad_alloc &) { result = failure("limit", "WASM memory allocation failed."); }
     catch (const std::length_error &) { result = failure("limit", "WASM allocation is not representable."); }
     catch (const InvalidAst &) { result = failure("error", "Unsupported or inconsistent LLVM AST."); }
   }
   return result.c_str();
+}
+extern "C" const char *demangle(size_t length, unsigned mode) {
+  return run(length, mode, Output::Ast);
+}
+extern "C" const char *demangle_with_text(size_t length, unsigned mode) {
+  return run(length, mode, Output::AstWithText);
 }
 extern "C" size_t result_size() { return result.size(); }

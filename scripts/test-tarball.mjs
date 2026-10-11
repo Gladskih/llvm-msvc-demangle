@@ -30,6 +30,11 @@ try {
     assert.equal(result.ast.nodes[0].tag, "Class");
     assert.equal(api.demangle("?f@@YAHH@Z").ast.nodes[0].kind, "FunctionSymbol");
     assert.equal(api.demangle("?").status, "invalid");
+    assert.equal(api.demangleWithText("?f@@YAHH@Z").text, "int __cdecl f(int)");
+    const formatted = api.demangleTypeWithText(".?AVWidget@demo@@");
+    assert.equal(formatted.text, "class demo::Widget");
+    assert.deepEqual(formatted.ast, result.ast);
+    assert.equal(api.demangleWithText("?").text, null);
     assert.equal((await createDemangler({ wasmBinary: await readFile(new URL(asset)) }))
       .demangleType(".H").status, "success");
   `);

@@ -57,3 +57,25 @@ test("long names and nested types parse without wrapper policy limits", async ({
   });
   expect(results).toEqual(["success", "success", "success"]);
 });
+
+test("native formatting works offline under CSP and agrees with analysis", async ({ page }) => {
+  await page.goto("/test/browser.html");
+  await page.evaluate(async () => {
+    window.wasmBinary = new Uint8Array(await (await fetch("/dist/llvm-msvc-demangle.wasm"))
+      .arrayBuffer());
+    window.createDemangler = (await import("/dist/browser.js")).createDemangler;
+  });
+  await page.context().setOffline(true);
+  const results = await page.evaluate(async () => {
+    const api = await window.createDemangler({ wasmBinary: window.wasmBinary });
+    return { symbol: api.demangleWithText("?f@@YAHH@Z"),
+      type: api.demangleTypeWithText(".?AVWidget@demo@@"),
+      analysis: api.demangleType(".?AVWidget@demo@@"),
+      invalid: api.demangleWithText("?") };
+  });
+  expect(results.symbol.text).toBe("int __cdecl f(int)");
+  expect(results.type.text).toBe("class demo::Widget");
+  expect(results.type.ast).toEqual(results.analysis.ast);
+  expect(results.analysis).not.toHaveProperty("text");
+  expect(results.invalid.text).toBeNull();
+});

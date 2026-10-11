@@ -25,6 +25,11 @@ if (result.status === "success") {
 
 const symbol = demangler.demangle("?f@@YAHH@Z");
 // FunctionSymbol -> FunctionSignature: Cdecl, int return type, int parameter.
+
+const display = demangler.demangleWithText("?f@@YAHH@Z");
+// { ...symbol, text: "int __cdecl f(int)" }
+const typeDisplay = demangler.demangleTypeWithText(".?AVWidget@demo@@");
+// { ...result, text: "class demo::Widget" }
 ```
 
 ## API
@@ -38,6 +43,15 @@ The returned `demangle(symbol)` and `demangleType(name)` methods are synchronous
 `demangleType` requires a dot-prefixed RTTI name and returns its **type** as the root.
 `demangle` accepts ordinary symbols, special RTTI symbols and dot-prefixed type names;
 the latter retain LLVM's synthetic VariableSymbol wrapper.
+
+`demangleWithText(symbol)` and `demangleTypeWithText(name)` return the same analysis
+plus `text`: LLVM's native presentation with `OF_Default`, or `null` on failure.
+The RTTI variant formats the extracted type. Each call parses once and formats that
+AST inside WASM before releasing it; no AST round trip or second parse is needed.
+The original methods do not invoke the presentation formatter or return a `text` field.
+LLVM may internally render individual name components while parsing in either path.
+All four methods are synchronous. Formatting is opt-in through the method name,
+without an argument flag. Text bytes use the same U+0000..U+00FF mapping as AST strings.
 
 Each call returns `{ status, consumed, ast, warnings }`:
 
@@ -159,7 +173,7 @@ Emscripten's version and SDK commit are updated explicitly in `upstream.json`.
 
 CI rebuilds from pins, checks lint/types/100% JS coverage/focused mutations, exercises
 LLVM's corpus and every truncated prefix, compares against an **unmodified native LLVM
-parser**, runs ASan/UBSan on deterministic malformed inputs, tests the browser/CSP/worker,
+parser and formatter**, runs ASan/UBSan on deterministic malformed inputs, tests the browser/CSP/worker,
 and installs the exact npm tarball offline. The release workflow reuses that tested
 tarball, verifies its SHA-256 and tag/version, and publishes with npm OIDC/provenance.
 Configure npm Trusted Publishing for `Gladskih/llvm-msvc-demangle`, workflow `publish.yml`,
