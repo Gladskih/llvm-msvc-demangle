@@ -7,6 +7,10 @@ for (const file of (await readdir(root)).filter(name => name.startsWith("ms-")))
     .filter(line => /^[?.]/.test(line)));
 }
 const corpus = new Set(names);
+// MicrosoftDemangle.cpp: parseTagUniqueName, demangleType and template parameter lists.
+const expanded = [`.?AV${"L".repeat(65536)}@@`, `.${"PA".repeat(300)}H`,
+  `.?AV?$Wide@${"H".repeat(40000)}@@`];
+for (const name of expanded) corpus.add(name);
 for (const name of names) {
   for (let length = 1; length < name.length; ++length) corpus.add(name.slice(0, length));
 }
@@ -21,8 +25,7 @@ for (let index = 0; index < 20000; ++index) {
   corpus.add(name.slice(0, position) + String.fromCharCode(0x20 + random(95)) +
     name.slice(position + 1));
 }
-corpus.add(`.${"PA".repeat(300)}H`);
 corpus.add(`?x@@3Y${"P".repeat(16)}@HA`);
 await writeFile(".build/fuzz.txt", `${[...corpus].join("\n")}\n`);
-await writeFile(".build/upstream-names.json", JSON.stringify(names));
-await writeFile(".build/upstream-names.txt", `${names.join("\n")}\n`);
+await writeFile(".build/upstream-names.json", JSON.stringify([...names, ...expanded]));
+await writeFile(".build/upstream-names.txt", `${[...names, ...expanded].join("\n")}\n`);

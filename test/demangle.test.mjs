@@ -81,12 +81,29 @@ test("invalid, truncated, and mismatched inputs return warnings", () => {
   assert.equal(api.demangle("??").ast, null);
 });
 
-test("depth limits unwind cleanly and preserve subsequent calls", () => {
+test("parses nested types beyond the former parser depth policy", () => {
   const result = api.demangleType(`.${"PA".repeat(300)}H`);
-  assert.equal(result.status, "limit");
-  assert.equal(result.ast, null);
-  assert.match(result.warnings[0], /resource limit/);
+  assert.equal(result.status, "success", JSON.stringify(result.warnings));
+  assert.equal(result.ast.nodes.filter(node => node.kind === "PointerType").length, 300);
   assert.equal(api.demangle("?x@@3HA").status, "success");
+});
+
+test("parses large names and outputs with memory growth beyond the former 32 MiB cap", () => {
+  const name = "L".repeat(12 * 1024 * 1024);
+  const result = api.demangleType(`.?AV${name}@@`);
+  assert.equal(result.status, "success", JSON.stringify(result.warnings));
+  assert.equal(find(result, "NamedIdentifier").name, name);
+  assert.equal(result.consumed, name.length + 6);
+  assert.equal(api.demangleType(".H").status, "success");
+});
+
+test("exports wide templates beyond the former node, arena and parser work policies", () => {
+  const result = api.demangleType(`.?AV?$Wide@${"H".repeat(40000)}@@`);
+  const identifier = find(result, "NamedIdentifier");
+  const parameters = result.ast.nodes[identifier.templateParams];
+  assert.equal(parameters.nodes.length, 40000);
+  assert.equal(result.ast.nodes.filter(node => node.kind === "PrimitiveType").length, 40000);
+  assert.equal(result.ast.nodes[parameters.nodes.at(-1)].primKind, "Int");
 });
 
 test("results remain independent across calls and instances", async () => {

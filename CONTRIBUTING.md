@@ -1,6 +1,6 @@
 # Contributing
 
-Keep the demangler local, bounded, dependency-free for consumers, and faithful to
+Keep the demangler local, memory-safe, dependency-free for consumers, and faithful to
 the pinned upstream AST. Consult LLVM source/tests before changing format behavior.
 Never infer AST fields by parsing printed demangled text.
 
@@ -13,7 +13,9 @@ Use imperative, present-tense commit messages.
 
 Bounds-check lengths and pointers before reads. Malformed/truncated names must
 produce diagnostics. Preserve 64-bit values exactly. Keep upstream pins immutable;
-generated guards must fail if upstream insertion points change. Preserve licenses.
+generated safety patches must fail if upstream insertion points change. Preserve licenses.
+Do not impose arbitrary caps on input length, parser work/depth, allocations, AST or output.
+Check against actual buffer bounds and address-space arithmetic instead.
 Document any new input/resource restriction and any LLVM AST/schema changes.
 
 For each public behavior, test the successful path and meaningful failure/boundary

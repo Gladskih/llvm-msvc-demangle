@@ -5,15 +5,20 @@ function failure(status, warning) {
 }
 
 function checkedRange(pointer, size, heap) {
-  if (!Number.isInteger(pointer) || pointer <= 0 || !Number.isInteger(size) ||
-      size <= 0 || size > 1048576 || pointer > heap.byteLength - size) {
+  // WebAssembly i32 exports represent addresses above 2 GiB as signed integers.
+  const address = pointer < 0 ? pointer + 2 ** 32 : pointer;
+  const length = size < 0 ? size + 2 ** 32 : size;
+  if (!Number.isInteger(address) || address <= 0 || !Number.isInteger(length) ||
+      length <= 0 || address > heap.byteLength - length) {
     throw new Error("WASM returned an invalid memory range.");
   }
-  return heap.subarray(pointer, pointer + size);
+  return heap.subarray(address, address + length);
 }
 
 function invoke(module, input, mode) {
-  const buffer = checkedRange(module._input_buffer(), input.length + 1, module.HEAPU8);
+  const pointer = module._input_buffer(input.length);
+  if (pointer === 0) return failure("limit", "Unable to allocate WASM input memory.");
+  const buffer = checkedRange(pointer, input.length + 1, module.HEAPU8);
   for (let index = 0; index < input.length; ++index) buffer[index] = input.charCodeAt(index);
   buffer[input.length] = 0;
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(

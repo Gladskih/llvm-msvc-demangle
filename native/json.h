@@ -1,5 +1,5 @@
 #pragma once
-#include "budget.h"
+#include "safety.h"
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -9,7 +9,6 @@ class Json {
   std::string text;
   std::vector<bool> first;
   void append(std::string_view value) {
-    if (text.size() + value.size() > 1024 * 1024) throw LimitExceeded{};
     text.append(value);
   }
 public:
