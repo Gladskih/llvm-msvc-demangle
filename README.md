@@ -46,13 +46,14 @@ Each call returns `{ status, consumed, ast, warnings }`:
 | `success` | LLVM accepted and consumed the complete input. |
 | `partial` | LLVM accepted a prefix; the AST is available with a trailing-input warning. |
 | `invalid` | Bad input or a name rejected by LLVM; `ast` is null. |
-| `limit` | A documented resource limit was reached; `ast` is null. The instance remains usable. |
+| `limit` | An allocation failed or its size cannot fit the target address space; `ast` is null. |
 | `error` | An inconsistent AST or a fatal WASM/ABI failure; `ast` is null. |
 
 `consumed` is the number of input bytes accepted on success/partial and zero on failure.
 Malformed names return warnings without throwing. A fatal WASM trap quarantines that
 instance; create a new demangler. Results own their objects and remain valid after later
-calls. There are no retained per-symbol native allocations or handles to dispose.
+calls. Input/output storage can retain capacity for reuse; there are no per-symbol
+native handles to dispose.
 
 ## AST contract
 
@@ -101,18 +102,21 @@ No eval/new Function is required. CSP needs `script-src 'self' 'wasm-unsafe-eval
 and `connect-src 'self'` when fetching the WASM.
 
 Requires **Node 24+** or a browser with standard WebAssembly exception handling:
-Chrome 137+, Firefox 131+, Safari 18.4+. Native WASM exceptions allow resource-limit
+Chrome 137+, Firefox 131+, Safari 18.4+. Native WASM exceptions allow allocation
 failures to unwind and release temporary allocations. Chromium and module-worker
 behavior are tested in CI.
 
-## Input and resource limits
+## Input and resources
 
-This initial API accepts printable ASCII strings, at most 4096 bytes, without NULs.
+This API accepts printable ASCII strings without NULs.
 Unsupported Unicode/control bytes produce `invalid`, not a guessed decoding.
-Wrapper policies are 128 active parser method frames, 32768 parser method entries,
-1 MiB arena allocation, 4096 AST nodes, 1 MiB intermediate output/JSON, and 32 MiB
-maximum WASM memory. These are defensive policies, not Microsoft ABI limits.
-They can reject unusually complex valid names. The grammar remains LLVM's.
+The package imposes no policy caps on input length, parser depth/work, AST node count,
+arena allocation or output size. Input storage is dynamic; WASM memory grows up to the
+wasm32 address-space ceiling, subject to the host's available memory. Integer-overflow
+and actual memory-range checks remain in place. LLVM's recursive parser is subject to
+the runtime's finite stack; exhausting it can trap and require a new instance.
+Use a terminable Worker when the application needs a time budget for untrusted input.
+The grammar remains LLVM's.
 
 ## Build, update and release
 
@@ -150,7 +154,7 @@ git push origin main --follow-tags
 
 The updater resolves the ref to an immutable commit and rehashes every source file.
 Clang regenerates AST bindings automatically; unknown field shapes, node mappings,
-composite flags, or changed guard insertion points fail the build for review.
+composite flags, or changed safety-patch insertion points fail the build for review.
 Emscripten's version and SDK commit are updated explicitly in `upstream.json`.
 
 CI rebuilds from pins, checks lint/types/100% JS coverage/focused mutations, exercises

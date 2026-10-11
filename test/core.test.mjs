@@ -6,7 +6,7 @@ function runtime(result = { status: "success", ast: { root: 0, nodes: [] }, cons
   const bytes = new TextEncoder().encode(JSON.stringify(result));
   const module = {
     HEAPU8: new Uint8Array(8192),
-    _input_buffer: () => 8,
+    _input_buffer: length => { module.allocated = length; return 8; },
     _demangle: (length, mode) => {
       module.last = { length, mode };
       module.HEAPU8.set(bytes, 5000);
@@ -24,6 +24,7 @@ test("copies ASCII bytes, selects each native entry mode, and returns detached r
   assert.equal(first.status, "success");
   assert.equal(module.HEAPU8[8], 63);
   assert.equal(module.HEAPU8[9], 0);
+  assert.equal(module.allocated, 1);
   assert.deepEqual(module.last, { length: 1, mode: 0 });
   first.warnings.push("local change");
   assert.deepEqual(api.demangleType(".H").warnings, []);
@@ -50,7 +51,7 @@ test("handles non-Error native failures", () => {
   assert.equal(createApi(module).demangle("?").status, "error");
 });
 
-for (const pointer of [0, -1, 1.5, NaN, 8191]) {
+for (const pointer of [-1, -(2 ** 32), 1.5, NaN, 8191]) {
   test(`checks the input buffer pointer ${pointer}`, () => {
     const module = runtime();
     module._input_buffer = () => pointer;
@@ -66,7 +67,7 @@ for (const pointer of [0, -1, 1.5, NaN, 8191]) {
   });
 }
 
-for (const size of [0, -1, 1.5, NaN, 1048577, 8192]) {
+for (const size of [0, -1, -(2 ** 32), 1.5, NaN, 8192]) {
   test(`checks the result size ${size}`, () => {
     const module = runtime();
     module._result_size = () => size;
@@ -74,11 +75,63 @@ for (const size of [0, -1, 1.5, NaN, 1048577, 8192]) {
   });
 }
 
-test("rejects outputs over the policy limit even when they fit in WASM memory", () => {
-  const module = runtime();
+test("accepts outputs over 1 MiB when they fit in WASM memory", () => {
+  const result = { status: "invalid", ast: null, consumed: 0,
+    warnings: ["x".repeat(1048577)] };
+  const module = runtime(result);
   module.HEAPU8 = new Uint8Array(2 * 1048576);
-  module._result_size = () => 1048577;
-  assert.match(createApi(module).demangle("?").warnings[0], /invalid memory range/);
+  assert.deepEqual(createApi(module).demangle("?"), result);
+});
+
+test("allocation failure returns a diagnostic and permits a later retry", () => {
+  const module = runtime();
+  const allocate = module._input_buffer;
+  module._input_buffer = () => 0;
+  const api = createApi(module);
+  assert.match(api.demangle("?").warnings[0], /allocate/);
+  assert.equal(api.demangle("?").status, "limit");
+  module._input_buffer = allocate;
+  assert.equal(api.demangle("?").status, "success");
+});
+
+test("handles signed wasm32 addresses above 2 GiB without truncating them", () => {
+  const module = runtime();
+  const original = module.HEAPU8;
+  module.HEAPU8 = {
+    byteLength: 2 ** 32,
+    subarray: (start, end) => {
+      if (start === 2 ** 31) return original.subarray(8, 8 + end - start);
+      return original.subarray(start, end);
+    },
+    set: (...args) => original.set(...args),
+  };
+  module._input_buffer = () => -(2 ** 31);
+  assert.equal(createApi(module).demangle("?").status, "success");
+  assert.equal(original[8], 63);
+});
+
+test("checks signed wasm32 result lengths against actual memory", () => {
+  const module = runtime();
+  const original = module.HEAPU8;
+  module.HEAPU8 = {
+    byteLength: 2 ** 32,
+    subarray: (start, end) => {
+      if (start === 8) return original.subarray(start, end);
+      assert.equal(end - start, 2 ** 31);
+      return original.subarray(start, start + 2);
+    },
+    set: (...args) => original.set(...args),
+  };
+  module._result_size = () => -(2 ** 31);
+  module._demangle = () => { original.set([123, 125], 5000); return 5000; };
+  assert.deepEqual(createApi(module).demangle("?"), {});
+});
+
+test("uses the current memory view after input allocation grows memory", () => {
+  const module = runtime();
+  module._input_buffer = () => { module.HEAPU8 = new Uint8Array(16384); return 8; };
+  assert.equal(createApi(module).demangle("?").status, "success");
+  assert.equal(module.HEAPU8[8], 63);
 });
 
 test("uses the current memory view after WASM memory growth", () => {

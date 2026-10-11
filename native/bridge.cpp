@@ -1,8 +1,10 @@
-#include "budget.h"
+#include "safety.h"
 #include "graph.h"
 #include "llvm/Demangle/MicrosoftDemangle.h"
 #include <cstring>
 #include <string>
+#include <stdexcept>
+#include <vector>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic error "-Wswitch-enum"
@@ -25,7 +27,7 @@ void Graph::write(Json &out, const Node *root) {
   out.raw("}");
 }
 
-static char input[4097];
+static std::vector<char> input;
 static std::string result;
 
 static std::string failure(std::string_view status, std::string_view warning) {
@@ -40,9 +42,8 @@ static std::string failure(std::string_view status, std::string_view warning) {
 }
 
 static std::string parse(size_t length, unsigned mode) {
-  budget = {};
   Demangler demangler;
-  std::string_view remaining(input, length);
+  std::string_view remaining(input.data(), length);
   Node *root = demangler.parse(remaining);
   if (demangler.Error || !root) return failure("invalid", "LLVM rejected the mangled name.");
   if (mode == 1) {
@@ -62,9 +63,14 @@ static std::string parse(size_t length, unsigned mode) {
   return out.result();
 }
 
-extern "C" char *input_buffer() { return input; }
+extern "C" char *input_buffer(size_t length) {
+  try { input.resize(checkedAdd(length, 1)); }
+  catch (const std::bad_alloc &) { return nullptr; }
+  catch (const std::length_error &) { return nullptr; }
+  return input.data();
+}
 static bool validInput(size_t length, unsigned mode) {
-  if (!length || length > 4096 || mode > 1) return false;
+  if (!length || length >= input.size() || mode > 1) return false;
   for (size_t index = 0; index < length; ++index) {
     if (input[index] < 0x20 || input[index] > 0x7e) return false;
   }
@@ -75,7 +81,8 @@ extern "C" const char *demangle(size_t length, unsigned mode) {
     result = failure("invalid", "Invalid native input length or mode.");
   else {
     try { result = parse(length, mode); }
-    catch (const LimitExceeded &) { result = failure("limit", "Demangling resource limit exceeded."); }
+    catch (const std::bad_alloc &) { result = failure("limit", "WASM memory allocation failed."); }
+    catch (const std::length_error &) { result = failure("limit", "WASM allocation is not representable."); }
     catch (const InvalidAst &) { result = failure("error", "Unsupported or inconsistent LLVM AST."); }
   }
   return result.c_str();

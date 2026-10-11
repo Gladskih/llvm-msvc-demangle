@@ -1,4 +1,4 @@
-// Independent upstream parser, without the wrapper's generated guards or JSON serializer.
+// Independent upstream parser, without the wrapper's safety patches or JSON serializer.
 #include "llvm/Demangle/MicrosoftDemangle.h"
 #include <iostream>
 #include <string>

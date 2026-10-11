@@ -1,6 +1,6 @@
 {
   "name": "llvm-msvc-demangle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local LLVM Microsoft C++ demangler with a structured AST, compiled to WebAssembly",
   "type": "module",
   "license": "MIT",
@@ -42,7 +42,7 @@
   "keywords": ["llvm", "msvc", "demangle", "rtti", "ast", "webassembly", "wasm", "typescript"],
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.0",
     "eslint": "10.11.0",
     "globals": "17.13.0",
     "typescript": "7.0.2"

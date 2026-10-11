@@ -46,12 +46,14 @@ test("module workers can load and analyze RTTI names", async ({ page }) => {
   expect(result.ast.nodes[0].tag).toBe("Struct");
 });
 
-test("resource limits preserve the browser instance", async ({ page }) => {
+test("long names and nested types parse without wrapper policy limits", async ({ page }) => {
   await page.goto("/test/browser.html");
   const results = await page.evaluate(async () => {
     const { createDemangler } = await import("/dist/browser.js");
     const api = await createDemangler();
-    return [api.demangleType(`.${"PA".repeat(300)}H`), api.demangle("?x@@3HA")];
+    return [api.demangleType(`.${"PA".repeat(300)}H`).status,
+      api.demangleType(`.?AV${"L".repeat(2 * 1024 * 1024)}@@`).status,
+      api.demangle("?x@@3HA").status];
   });
-  expect(results.map(result => result.status)).toEqual(["limit", "success"]);
+  expect(results).toEqual(["success", "success", "success"]);
 });

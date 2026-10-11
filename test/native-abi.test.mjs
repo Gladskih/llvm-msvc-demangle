@@ -13,16 +13,35 @@ function invoke(length, mode) {
 
 test("native ABI rejects invalid lengths and modes before reading input", () => {
   assert.equal(invoke(0, 0).status, "invalid");
-  assert.equal(invoke(4097, 0).status, "invalid");
+  module._input_buffer(17);
+  assert.equal(invoke(18, 0).status, "invalid");
   assert.equal(invoke(-1, 0).status, "invalid");
   assert.equal(invoke(1, 2).status, "invalid");
 });
 
 test("native ABI rejects embedded NUL, controls and non-ASCII bytes", () => {
-  module.HEAPU8[module._input_buffer()] = 0;
+  module.HEAPU8[module._input_buffer(1)] = 0;
   assert.equal(invoke(1, 0).status, "invalid");
-  module.HEAPU8[module._input_buffer()] = 0xff;
+  module.HEAPU8[module._input_buffer(1)] = 0xff;
   assert.equal(invoke(1, 0).status, "invalid");
-  module.HEAPU8[module._input_buffer()] = 0x1f;
+  module.HEAPU8[module._input_buffer(1)] = 0x1f;
   assert.equal(invoke(1, 0).status, "invalid");
+});
+
+test("native ABI rejects size_t overflow without losing the existing buffer", () => {
+  const pointer = module._input_buffer(1);
+  module.HEAPU8[pointer] = 63;
+  assert.equal(module._input_buffer(-1), 0);
+  assert.equal(invoke(1, 0).status, "invalid");
+  const restored = module._input_buffer(2);
+  module.HEAPU8.set([46, 72], restored);
+  assert.equal(invoke(2, 0).status, "success");
+});
+
+test("native input allocation grows WASM memory beyond the former 32 MiB ceiling", () => {
+  const pointer = module._input_buffer(33 * 1024 * 1024);
+  assert.notEqual(pointer, 0);
+  assert(module.HEAPU8.byteLength > 33 * 1024 * 1024);
+  module.HEAPU8.set([46, 72], pointer);
+  assert.equal(invoke(2, 0).status, "success");
 });

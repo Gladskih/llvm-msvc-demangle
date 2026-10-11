@@ -14,14 +14,13 @@ public:
     if (!node) { out.raw("null"); return; }
     auto entry = identifiers.find(node);
     if (entry != identifiers.end()) { out.number(entry->second); return; }
-    if (nodes.size() >= 4096) throw LimitExceeded{};
     const size_t index = nodes.size();
     identifiers.emplace(node, index);
     nodes.push_back(node);
     out.number(index);
   }
   void array(Json &out, Node *const *values, size_t count) {
-    if (count > 4096 || (count && !values)) throw InvalidAst{};
+    if (count && !values) throw InvalidAst{};
     out.raw("[");
     for (size_t index = 0; index < count; ++index) {
       if (index) out.raw(",");
