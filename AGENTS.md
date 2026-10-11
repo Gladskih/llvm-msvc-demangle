@@ -1,0 +1,5 @@
+- Follow CONTRIBUTING.md as the quality gate and audit final changes before reporting success.
+- Preserve fully local browser operation and bounded parsing of malformed names.
+- Verify format behavior against pinned LLVM source/tests, never model intuition alone.
+- Prefer warnings to exceptions for parse failures, and preserve exact integer values.
+- Keep tool output concise and report suspicious behavior immediately.
