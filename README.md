@@ -189,11 +189,11 @@ local `npm publish <tested-tarball> --ignore-scripts --access public`.
 
 ## Sources and license
 
-Built from LLVM 23.1.3, commit `0d261d1ca552c95a8f007e061c787ac7132fbcbc`:
+Source and toolchain revisions are recorded in [`upstream.json`](upstream.json). Upstream references:
 
-- [MicrosoftDemangle.cpp](https://github.com/llvm/llvm-project/blob/0d261d1ca552c95a8f007e061c787ac7132fbcbc/llvm/lib/Demangle/MicrosoftDemangle.cpp)
-- [MicrosoftDemangleNodes.h](https://github.com/llvm/llvm-project/blob/0d261d1ca552c95a8f007e061c787ac7132fbcbc/llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h)
-- [LLVM demangler tests](https://github.com/llvm/llvm-project/tree/0d261d1ca552c95a8f007e061c787ac7132fbcbc/llvm/test/Demangle)
+- [MicrosoftDemangle.cpp](https://github.com/llvm/llvm-project/blob/main/llvm/lib/Demangle/MicrosoftDemangle.cpp)
+- [MicrosoftDemangleNodes.h](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h)
+- [LLVM demangler tests](https://github.com/llvm/llvm-project/tree/main/llvm/test/Demangle)
 - [Emscripten exception handling](https://emscripten.org/docs/porting/exceptions.html)
 
 Wrapper: MIT. LLVM/generated artifacts: Apache-2.0 WITH LLVM-exception. Redistribute
