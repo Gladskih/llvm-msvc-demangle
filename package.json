@@ -1,10 +1,12 @@
 {
   "name": "llvm-msvc-demangle",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local LLVM Microsoft C++ demangler with a structured AST, compiled to WebAssembly",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -16,7 +18,13 @@
     "./build-info.json": "./dist/build-info.json"
   },
   "types": "./dist/index.d.ts",
-  "files": ["dist/", "LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/", "upstream.json"],
+  "files": [
+    "dist/",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "licenses/",
+    "upstream.json"
+  ],
   "scripts": {
     "upstream:update": "node scripts/update-upstream.mjs",
     "sources:fetch": "node scripts/fetch-sources.mjs",
@@ -35,11 +43,27 @@
     "verify": "npm run lint && npm run typecheck && npm run test:coverage && npm run test:upstream && npm run test:mutation && npm run test:browser && npm run verify:package",
     "prepack": "npm run build && npm run verify:package"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/Gladskih/llvm-msvc-demangle.git" },
-  "bugs": { "url": "https://github.com/Gladskih/llvm-msvc-demangle/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gladskih/llvm-msvc-demangle.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Gladskih/llvm-msvc-demangle/issues"
+  },
   "homepage": "https://github.com/Gladskih/llvm-msvc-demangle#readme",
-  "publishConfig": { "access": "public" },
-  "keywords": ["llvm", "msvc", "demangle", "rtti", "ast", "webassembly", "wasm", "typescript"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "llvm",
+    "msvc",
+    "demangle",
+    "rtti",
+    "ast",
+    "webassembly",
+    "wasm",
+    "typescript"
+  ],
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.0",
